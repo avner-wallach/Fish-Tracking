@@ -1,4 +1,4 @@
-function labelPawLocations(session, vidfile, frameInds, totalEgs, anchorPts, colors)
+function labelPawLocations(session, vidfile, frameInds, totalEgs, colors)
 
 % !!! need to document
 
@@ -9,7 +9,7 @@ figSize = .8;
 % initializations
 % switch view
 %     case 'Bot'
-        objectNum = 4;
+        objectNum = 13;
 %     case 'Top'
 %         objectNum = 2;
 % end
@@ -22,7 +22,8 @@ objects=0;
 
 % prepare figure
 fig = figure('units', 'pixels', 'outerposition', [300 100 vid.Width*figSize vid.Height*figSize],...
-             'color', [0 0 0], 'menubar', 'none', 'keypressfcn', @keypress,'WindowButtonDownFcn',@buttondown);
+             'color', [0 0 0], 'menubar', 'none', 'keypressfcn', @keypress...
+             ,'WindowButtonDownFcn',@buttondown,'WindowButtonUpFcn',@buttonup);
 imPreview = image(frame);hold on;
 
 % scatter([anchorPts{1}(1) anchorPts{2}(1) anchorPts{3}(1) anchorPts{4}(1)] .* (vid.Width-1) + 1,...
@@ -33,6 +34,7 @@ imPreview = image(frame);hold on;
 
 % initialize draggable objects
 impoints = cell(1,objectNum);
+labels= [];
 locations = nan(2, totalEgs, objectNum); % ([x,y], egNum, obNum)
 locationFrameInds = nan(1, totalEgs);
 
@@ -98,16 +100,27 @@ function keypress(~,~)
     end
 end
 
-function buttondown(a,b)
+function buttondown(~,~)
     if(objects<objectNum)
         objects=objects+1;
         CP=get(gca,'CurrentPoint');
         impoints{objects} = impoint(gca,CP(1,1:2));
+        labels(objects) = text(CP(1,1),CP(1,2),num2str(objects),'Color',[1 1 1]);        
         setColor(impoints{objects}, colors(objects,:));
+%     else
+%         for i=1:objects
+%             set(labels(i),'Position',getPosition(impoints{i}));
+%         end
     end
  
 end
-        
+
+function buttonup(~,~)
+    for i=1:objects
+        set(labels(i),'Position',getPosition(impoints{i}));
+    end
+end
+
 
 function getNewFrame
     frameInd = frameInds(randi(length(frameInds)));

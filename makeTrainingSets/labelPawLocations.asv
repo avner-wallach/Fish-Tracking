@@ -1,4 +1,4 @@
-function labelPawLocations(session, vidfile, frameInds, totalEgs, anchorPts, colors)
+function labelPawLocations(session, vidfile, frameInds, totalEgs, colors)
 
 % !!! need to document
 
@@ -9,7 +9,7 @@ figSize = .8;
 % initializations
 % switch view
 %     case 'Bot'
-        objectNum = 4;
+        objectNum = 13;
 %     case 'Top'
 %         objectNum = 2;
 % end
@@ -30,14 +30,15 @@ imPreview = image(frame);hold on;
 %     200, colors, 'filled');     % show anchor points
 
 
-% scatter([1, vid.Width, vid.Width, 1], [1, 1, vid.Height, vid.Height], 200, colors, 'filled');
-set(gca, 'units', 'normalized', 'position', [0 0 1 1],'ButtonDownFcn',@buttondown)
-getNewFrame;
 
 % initialize draggable objects
 impoints = cell(1,objectNum);
 locations = nan(2, totalEgs, objectNum); % ([x,y], egNum, obNum)
 locationFrameInds = nan(1, totalEgs);
+
+% scatter([1, vid.Width, vid.Width, 1], [1, 1, vid.Height, vid.Height], 200, colors, 'filled');
+set(gca, 'units', 'normalized', 'position', [0 0 1 1],'ButtonDownFcn',@buttondown)
+getNewFrame;
 
 
 while stillGoing
@@ -102,6 +103,7 @@ function buttondown(a,b)
         objects=objects+1;
         CP=get(gca,'CurrentPoint');
         impoints{objects} = impoint(gca,CP(1,1:2));
+        
         setColor(impoints{objects}, colors(objects,:));
     end
  
@@ -112,13 +114,20 @@ function getNewFrame
     frameInd = frameInds(randi(length(frameInds)));
     frame = read(vid, frameInd);
     set(imPreview, 'CData', frame);
-    for i=1:objectn
-    impoints = cell(1,objectNum);
+    for i=1:objectNum
+        if(numel(impoints{i}))
+            impoints{i}.delete;
+        end
+    end
     objects=0;
 end
 
 function saveData
-    save([getenv('OBSDATADIR') '\' session '\' 'handLabeledSets\' vidfile '.mat'], ...
+    D=[getenv('OBSDATADIR') '\' session '\' 'handLabeledSets'];
+    if(~exist(D))
+        mkdir(D);
+    end
+    save([D '\' vidfile '.mat'], ...
         'locations', 'locationFrameInds');
 end
 
