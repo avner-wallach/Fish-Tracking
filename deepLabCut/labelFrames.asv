@@ -3,55 +3,51 @@ function labelFrames(trainingSetDir, features)
 % add way of excluding trials
 
 % settings
-vidScaling = 2;
+vidScaling = .8;
 textOffset = [5 0];
 nanColor = [1 0 0];
 labelledColor = [1 1 0];
 
 % initializations
 defaultPositions = repmat([10 10], length(features), 1) .* repmat(1:length(features),2,1)';
-load([trainingSetDir 'trainingData.mat'], 'trainingData', 'view');
+load([trainingSetDir 'trainingData.mat'], 'trainingData');
 fields = fieldnames(trainingData);
 structInd = 1;
 selectedPoint = nan;
-
-
+objects=0;
+featmode=0; %0-jump points, 1-drag points
 
 % create figure
 currentSession = trainingData(structInd).session;
+currentVidname= trainingData(structInd).vidfile;
 currentFrame = trainingData(structInd).frameNum;
 
-if strcmp(view, 'top')
-    vid = VideoReader([getenv('OBSDATADIR') 'sessions\' currentSession '\runTop.mp4']);
-    hgt = vid.Height;
-elseif strcmp(view, 'bot')
-    vid = VideoReader([getenv('OBSDATADIR') 'sessions\' currentSession '\runBot.mp4']);
-    hgt = vid.Height;
-elseif strcmp(view, 'both')
-    vid = VideoReader([getenv('OBSDATADIR') 'sessions\' currentSession '\runTop.mp4']);
-    vidBot = VideoReader([getenv('OBSDATADIR') 'sessions\' currentSession '\runBot.mp4']);
-    hgt = vid.Height + vidBot.Height;
-end
+vid = VideoReader([getenv('OBSDATADIR') '\' currentSession '\' currentVidname '.avi']);
+hgt = vid.Height;
 
-fig = figure('name', sprintf('%s, frame %i', currentSession, currentFrame), ...
-    'menubar', 'none', 'color', 'white', 'keypressfcn', @keypress, 'position', [200 200 vid.Width*vidScaling, hgt*vidScaling]);
-colormap gray
-if strcmp(view, 'both')
-    keyboard
-    imgCat = cat(1, rgb2gray(read(vid, currentFrame)), rgb2gray(read(vidBot, currentFrame)));
-    im = image(imgCat, 'CDataMapping', 'scaled'); hold on
-else
+fig = figure('name', sprintf('%s, frame %i', currentSession, currentFrame),...
+    'units', 'pixels', 'outerposition', [300 100 vid.Width*figSize vid.Height*figSize],...
+             'color', [0 0 0], 'menubar', 'none', 'keypressfcn', @keypress...
+             ,'WindowButtonDownFcn',@buttondown,'WindowButtonUpFcn',@buttonup);
+% im= image(frame);hold on;
+
+% fig = figure('name', sprintf('%s, frame %i', currentSession, currentFrame), ...
+%     'menubar', 'none', 'color', 'white', 'keypressfcn', @keypress, 'position', [200 200 vid.Width*vidScaling, hgt*vidScaling]);
+% colormap gray
+% if strcmp(view, 'both')
+%     imgCat = cat(1, rgb2gray(read(vid, currentFrame)), rgb2gray(read(vidBot, currentFrame)));
+%     im = image(imgCat, 'CDataMapping', 'scaled'); hold on
+% else
     im = image(rgb2gray(read(vid, currentFrame)), 'CDataMapping', 'scaled'); hold on
-end
+% end
 set(gca, 'position', [0 0 1 1], 'visible', 'off')
-selectedCirc = scatter(0, 0, 200, [.5 .5 1], 'linewidth', 3, 'visible', 'off'); hold on
+% selectedCirc = scatter(0, 0, 200, [.5 .5 1], 'linewidth', 3, 'visible', 'off'); hold on
 
 
 
 % add fields that have not yet been created, and creatable draggable objects
 featurePoints = cell(1, length(features));
 featureTexts = cell(1, length(features));
-
 
 for i = 1:length(features)
     
@@ -68,10 +64,6 @@ for i = 1:length(features)
     addNewPositionCallback(featurePoints{i}, @(x) movePoint(i));
     setPositionConstraintFcn(featurePoints{i}, @constrainPosition)
     
-    % add special constraint for end of tail
-    if strcmp(features{i}, 'tailEnd')
-        setPositionConstraintFcn(featurePoints{i}, @tailEndConstrainPosition)
-    end
 end
 updateFrame(0); % set positions and colors of points based on whether the first frame has already been labeled
 
@@ -132,8 +124,12 @@ function keypress(~,~)
                 
             % s: save progress
             case 115
-                save([trainingSetDir 'trainingData.mat'], 'trainingData');
+                save([trainingSetDir 'trainingData.mat'], 'trainingData', 'view');
                 m = msgbox('saving progress...'); pause(.5); close(m)
+                
+            % m: change mode
+            case 109
+                featmode = ~featmode;
         end
     end
 end
@@ -148,50 +144,91 @@ function updateFrame(frameStep)
     if structInd==0; structInd=length(trainingData); end
     if structInd>length(trainingData); structInd=1; end
     currentFrame = trainingData(structInd).frameNum;
+    currentVidname= trainingData(structInd).vidfileName;
     
     % load new video if switching to new session
     if ~strcmp(currentSession, trainingData(structInd).session)
         currentSession = trainingData(structInd).session;
         m = msgbox(sprintf('loading session %s...', currentSession)); pause(.5); close(m);
-        
-        if strcmp(view, 'top')
-            vid = VideoReader([getenv('OBSDATADIR') 'sessions\' currentSession '\runTop.mp4']);
-            hgt = vid.Height;
-        elseif strcmp(view, 'bot')
-            vid = VideoReader([getenv('OBSDATADIR') 'sessions\' currentSession '\runBot.mp4']);
-            hgt = vid.Height;
-        elseif strcmp(view, 'both')
-            vid = VideoReader([getenv('OBSDATADIR') 'sessions\' currentSession '\runTop.mp4']);
-            vidBot = VideoReader([getenv('OBSDATADIR') 'sessions\' currentSession '\runBot.mp4']);
-            hgt = vid.Height + vidBot.Height;
-        end
 
+        vid = VideoReader([getenv('OBSDATADIR') '\' currentSession '\' currentVidname '.avi']);
+        hgt = vid.Height;        
+    
     end
     
     % update frame
-    frame = rgb2gray(read(vid, trainingData(structInd).frameNum));
+    frame = rgb2gray(read(vid, currentFrame));
+    
     set(im, 'CData', frame);
     if trainingData(structInd).includeFrame; includedString = '(included)'; else; includedString = ''; end
     set(fig, 'name', sprintf('%s, frame %i %s', currentSession, currentFrame, includedString))
     
     % update colors and positions of points
+    nanpoints=0;
     for j = 1:length(features)
         pos = trainingData(structInd).(features{j});
         
-        if any(isnan(pos)) % not yet tracked
+        if any(isnan(pos)); % not yet tracked
             set(featureTexts{j}, 'color', nanColor);
             setColor(featurePoints{j}, nanColor);
+            nanpoints = nanpoints+1;
         else
             set(featureTexts{j}, 'position', pos, 'color', labelledColor);
             setColor(featurePoints{j}, labelledColor);
             setPosition(featurePoints{j}, pos);
-        end
+        end        
     end
-    
+    if(nanpoints==length(features))
+        featmode=0; %mode is add points        
+%         objects=0;
+    else
+        featmode=1;
+    end
     set(selectedCirc, 'visible', 'off')
     selectedPoint = nan;
 end
 
+function buttondown(~,~)
+    objects=0;
+    
+    %find first non tracked feature
+    if(featmode==0)
+        for j = 1:length(features)
+            pos = trainingData(structInd).(features{j});            
+            if(any(~isnan(pos))); % tracked       
+                objects=objects+1;
+            end
+        end    
+        if(objects<length(features))
+            objects=objects+1;
+            CP=get(gca,'CurrentPoint');
+    %         featureTexts{objects} = text(CP(1)+textOffset(1), CP(2)+textOffset(2), features{objects});
+    %         featurePoints{objects} = impoint(gca, CP);
+    %         addNewPositionCallback(featurePoints{objects}, @(x) movePoint(objects));
+            setPosition(featurePoints{objects}, CP);
+            set(featureTexts{objects}, 'position', [CP(1)+textOffset(1), CP(2)+textOffset(2)],...
+                'color', labelledColor);
+            setColor(featurePoints{objects}, labelledColor);
+            selectedPoint = objects;
+
+    %     setPositionConstraintFcn(featurePoints{i}, @constrainPosition)
+
+    %         impoints{objects} = impoint(gca,CP(1,1:2));
+    %         labels(objects) = text(CP(1,1),CP(1,2),num2str(objects),'Color',[1 1 1]);        
+    %         setColor(impoints{objects}, colors(objects,:));
+    %     else
+    %         for i=1:objects
+    %             set(labels(i),'Position',getPosition(impoints{i}));
+    %         end
+        end
+    end 
+end
+
+% function buttonup(~,~)
+%     for i=1:objects
+%         set(labels(i),'Position',getPosition(impoints{i}));
+%     end
+% end
 
 
 
@@ -207,32 +244,14 @@ end
 
 
 
-
 % make sure points don't go out of frame
-function constrainedPos = constrainPosition(newPos)
-    constrainedPos(1) = min(newPos(1), vid.Width);
-    constrainedPos(1) = max(constrainedPos(1), 1);
-    constrainedPos(2) = min(newPos(2), hgt);
-    constrainedPos(2) = max(constrainedPos(2), 1); 
-end
+% function constrainedPos = constrainPosition(newPos)
+%     constrainedPos(1) = min(newPos(1), vid.Width);
+%     constrainedPos(1) = max(constrainedPos(1), 1);
+%     constrainedPos(2) = min(newPos(2), hgt);
+%     constrainedPos(2) = max(constrainedPos(2), 1); 
+% end
 
-
-% make sure tail end stays on edge of train
-function constrainedPos = tailEndConstrainPosition(newPos)
-    
-    if newPos(2)<1
-        constrainedPos(1) = min(newPos(1), vid.Width);
-        constrainedPos(1) = max(constrainedPos(1), 1);
-        constrainedPos(2) = 1;
-    elseif newPos(2)>vid.Height
-        constrainedPos(1) = min(newPos(1), vid.Width);
-        constrainedPos(1) = max(constrainedPos(1), 1);
-        constrainedPos(2) = hgt;
-    else
-        constrainedPos(1) = 1;
-        constrainedPos(2) = newPos(2);
-    end
-end
 
 end
 

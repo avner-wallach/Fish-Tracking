@@ -1,0 +1,42 @@
+%% initialize new training data structure
+
+% settings
+trainingSetName = 'IntialRun';
+%view = 'both';
+sessions = {'20180222'};
+frameNum = 10;
+%obsPortion = .5; % portion of trials to include obstacle
+
+
+trainingSetDir = [getenv('OBSDATADIR')  '\' session '\' trainingSetName '\'];
+
+if ~exist(trainingSetDir, 'dir'); mkdir(trainingSetDir); end
+
+if ~exist([trainingSetDir 'trainingData.mat'], 'file')
+    trainingData = createTrainingDataStruct(sessions, frameNum, obsPortion);
+    save([trainingSetDir 'trainingData.mat'], 'trainingData', 'view')
+else
+    fprintf('%s already exists... did not create file\n', trainingSetName);
+end
+
+%% label things
+
+trainingSetName = 'topBotCat';
+
+trainingSetDir = [getenv('OBSDATADIR') 'tracking\trainingData\deepLabCut\' trainingSetName '\'];
+% features = {'pawTL', 'pawTR', 'pawBR', 'pawBL', 'gen', 'tailBase', 'tailMid', 'tailEnd'};
+features = {'paw1', 'paw2', 'paw3', 'paw4', 'gen', 'tailBase', 'tailMid', 'tailEnd', 'paw1LH', 'paw2LF', 'paw3RF', 'paw4RH'}; % with top view
+labelFrames(trainingSetDir, features);
+
+
+
+%% prepare data for deepLabCut
+trainingSetName = 'topBotCat';
+features = {'pawTL', 'pawTR', 'pawBR', 'pawBL','gen', 'tailBase', 'tailMid', 'tailEnd'}; % excluding genitals
+
+trainingSetDir = [getenv('TRAININGEXAMPLESDIR') 'deepLabCut\' trainingSetName '\'];
+if ~exist(trainingSetDir, 'dir'); mkdir(trainingSetDir); end
+load([getenv('OBSDATADIR') 'tracking\trainingData\deepLabCut\' trainingSetName '\trainingData.mat'], 'trainingData')
+prepareTrainingImages(trainingSetDir, trainingData, features);
+
+

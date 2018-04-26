@@ -1,45 +1,45 @@
 %% initialize new training data structure
 
 % settings
-trainingSetName = 'topBotCat';
-view = 'both';
-sessions = {'180122_001', '180122_002', '180122_003', ...
-            '180123_001', '180123_002', '180123_003', ...
-            '180124_001', '180124_002', '180124_003', ...
-            '180125_001', '180125_002', '180125_003'};
-frameNum = 1000;
-obsPortion = .5; % portion of trials to include obstacle
+trainingSetName = 'IntialRun';
+%view = 'both';
+sessions = {'20180222'};
+vidfiles = {'video_20180222_1754'};
+frameNum = 3;
+%obsPortion = .5; % portion of trials to include obstacle
 
 
-trainingSetDir = [getenv('OBSDATADIR') 'tracking\trainingData\deepLabCut\' trainingSetName '\'];
+trainingSetDir = [getenv('OBSDATADIR') '\' trainingSetName '\'];
 
 if ~exist(trainingSetDir, 'dir'); mkdir(trainingSetDir); end
 
 if ~exist([trainingSetDir 'trainingData.mat'], 'file')
-    trainingData = createTrainingDataStruct(sessions, frameNum, obsPortion);
-    save([trainingSetDir 'trainingData.mat'], 'trainingData', 'view')
+    trainingData = createTrainingDataStruct(sessions, frameNum,vidfiles);
+    save([trainingSetDir 'trainingData.mat'], 'trainingData')
 else
     fprintf('%s already exists... did not create file\n', trainingSetName);
 end
 
 %% label things
 
-trainingSetName = 'topBotCat';
+trainingSetName = 'IntialRun';
 
-trainingSetDir = [getenv('OBSDATADIR') 'tracking\trainingData\deepLabCut\' trainingSetName '\'];
+trainingSetDir = [getenv('OBSDATADIR')  '\' trainingSetName '\'];
 % features = {'pawTL', 'pawTR', 'pawBR', 'pawBL', 'gen', 'tailBase', 'tailMid', 'tailEnd'};
-features = {'paw1', 'paw2', 'paw3', 'paw4', 'gen', 'tailBase', 'tailMid', 'tailEnd', 'paw1LH', 'paw2LF', 'paw3RF', 'paw4RH'}; % with top view
+features = {'chin', 'mouth', 'LED', 'LPecBase', 'LPecTip', 'RPecBase', 'RPecTip',...
+    'Trunk1', 'Trunk2', 'Tail1', 'Tail2', 'CaudalFork','SideView'};
 labelFrames(trainingSetDir, features);
 
 
 
 %% prepare data for deepLabCut
-trainingSetName = 'topBotCat';
-features = {'pawTL', 'pawTR', 'pawBR', 'pawBL','gen', 'tailBase', 'tailMid', 'tailEnd'}; % excluding genitals
+trainingSetName = 'IntialRun';
+features = {'chin', 'mouth', 'LED', 'LPecBase', 'LPecTip', 'RPecBase', 'RPecTip',...
+    'Trunk1', 'Trunk2', 'Tail1', 'Tail2', 'CaudalFork','SideView'};
 
-trainingSetDir = [getenv('TRAININGEXAMPLESDIR') 'deepLabCut\' trainingSetName '\'];
+trainingSetDir = [getenv('OBSDATADIR') '\' trainingSetName '\'];
 if ~exist(trainingSetDir, 'dir'); mkdir(trainingSetDir); end
-load([getenv('OBSDATADIR') 'tracking\trainingData\deepLabCut\' trainingSetName '\trainingData.mat'], 'trainingData')
+load([getenv('OBSDATADIR') '\' trainingSetName  '\trainingData.mat'], 'trainingData')
 prepareTrainingImages(trainingSetDir, trainingData, features);
 
 

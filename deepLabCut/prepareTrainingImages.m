@@ -28,14 +28,15 @@ structInds = find([trainingData.includeFrame]); % only use frames where all fram
 
 % create images (only for frames in which everything is labelled
 currentSession = trainingData(structInds(1)).session;
-vid = VideoReader([getenv('OBSDATADIR') 'sessions\' currentSession '\runBot.mp4']);
+currentVidname= trainingData(structInds(1)).vidfile;
+vid = VideoReader([getenv('OBSDATADIR') '\' currentSession '\' currentVidname '.avi']);
 fprintf('processing session: %s\n', currentSession)
 
 for i = 1:length(structInds)
     
     if ~strcmp(currentSession, trainingData(structInds(i)).session)
         currentSession = trainingData(structInds(i)).session;
-        vid = VideoReader([getenv('OBSDATADIR') 'sessions\' currentSession '\runBot.mp4']);
+        vid = VideoReader([getenv('OBSDATADIR') '\' currentSession '\' currentVidname '.avi']);
         fprintf('processing session: %s\n', currentSession)
     end
     frame = rgb2gray(read(vid, trainingData(structInds(i)).frameNum));
